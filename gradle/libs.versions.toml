@@ -1,0 +1,27 @@
+[versions]
+kotlin = "2.4.20"
+kotlinxCoroutines = "1.10.2"
+lwjgl = "3.4.1"
+imgui = "1.86.11"
+joml = "1.10.5"
+
+[libraries]
+#Kotlin
+kotlinGradlePlugin = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin", version.ref = "kotlin" }
+kotlinxCoroutines = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinxCoroutines" }
+#lwjgl core
+lwjgl-core = { module = "org.lwjgl:lwjgl-bom", version.ref = "lwjgl"}
+#lwjgl
+lwjgl = { module = "org.lwjgl:lwjgl", version.ref = "lwjgl" }
+lwjglbgfx = { module = "org.lwjgl:lwjgl-bgfx", version.ref = "lwjgl" }
+lwjglglfw = { module = "org.lwjgl:lwjgl-glfw", version.ref = "lwjgl" }
+lwjglopengl = { module = "org.lwjgl:lwjgl-opengl", version.ref = "lwjgl" }
+lwjglstb = { module = "org.lwjgl:lwjgl-stb", version.ref = "lwjgl" }
+#Rest
+imgui = { module = "io.github.spair:imgui-java-app", version.ref = "imgui" }
+joml = { module = "org.joml:joml", version.ref = "joml" }
+
+# Libraries can be bundled together for easier import
+[bundles]
+kotlinxEcosystem = ["kotlinxCoroutines"]
+lwjgl = ["lwjgl", "lwjglbgfx", "lwjglglfw", "lwjglopengl", "lwjglstb"]
