@@ -58,20 +58,30 @@ class Line(
         this.ebo.unbind()
     }
     
+    private val uModel = this.shader.getUniformLocation("uModel")
+
+    private val model = Matrix4f()
+    private var modelDirty = true
+
     override fun onRender() {
         this.shader.use()
-        glUniformMatrix4fv(this.uProjection, false, RenderManager.getProjection())
-        this.shader.setVec3(this.uColor, this.color)
-        
-        val model = Matrix4f()
-            .translate(this.x + this.center().first, this.y + this.center().second, 0f)
-            .rotateZ(Math.toRadians(this.rotationDeg.toDouble()).toFloat())
-            .translate(-this.center().first, -this.center().second, 0f)
-            .scale(this.scaleX(), this.scaleY(), 1f)
-            .scale(this.scale.first.toFloat(), this.scale.second.toFloat(), 1f)
-        
-        this.shader.setMat4("uModel", model)
-        
+
+        //the shader only forwards values to OpenGL when they changed since the last upload
+        this.shader.setMat4Cached(this.uProjection, RenderManager.getProjection())
+        this.shader.setVec3Cached(this.uColor, this.color)
+
+        if (this.modelDirty) {
+            this.model.identity()
+                .translate(this.x + this.center().first, this.y + this.center().second, 0f)
+                .rotateZ(Math.toRadians(this.rotationDeg.toDouble()).toFloat())
+                .translate(-this.center().first, -this.center().second, 0f)
+                .scale(this.scaleX(), this.scaleY(), 1f)
+                .scale(this.scale.first.toFloat(), this.scale.second.toFloat(), 1f)
+            this.modelDirty = false
+        }
+
+        this.shader.setMat4Cached(this.uModel, this.model)
+
         this.vao.bind()
         glDrawArrays(GL_LINES, 0, this.drawCount)
         glBindVertexArray(0)
@@ -101,19 +111,30 @@ class Line(
         return false
     }
     
+    fun setPosition(x: Number, y: Number, x2: Number, y2: Number) = apply {
+        this.x = x.toFloat()
+        this.y = y.toFloat()
+        this.x2 = x2.toFloat()
+        this.y2 = y2.toFloat()
+        this.modelDirty = true
+    }
+
     fun changeColor(newColor: FloatArray) = apply {
         this.color = newColor
     }
     
     fun rotate(deg: Number) = apply {
         this.rotationDeg = this.rotationDeg.toFloat() + deg.toFloat()
+        this.modelDirty = true
     }
-    
+
     fun setScale(x: Number, y: Number) = apply {
         this.scale = Pair(x, y)
+        this.modelDirty = true
     }
-    
+
     fun scale(x: Number, y: Number) = apply {
         this.scale = Pair(this.scale.first.toFloat() + x.toFloat(), this.scale.second.toFloat() + y.toFloat())
+        this.modelDirty = true
     }
 }

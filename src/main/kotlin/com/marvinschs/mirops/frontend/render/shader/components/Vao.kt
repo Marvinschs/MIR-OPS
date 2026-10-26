@@ -16,6 +16,14 @@ class Vao {
         vbo.unbind()
     }
     
+    // Links a VBO with interleaved attributes: [stride] and [offset] are in floats
+    fun linkVBO(vbo: Vbo, layout: Int, size: Int, stride: Int, offset: Int) {
+        vbo.bind()
+        glVertexAttribPointer(layout, size, GL_FLOAT, false, stride * Float.SIZE_BYTES, offset.toLong() * Float.SIZE_BYTES)
+        glEnableVertexAttribArray(layout)
+        vbo.unbind()
+    }
+
     // Binds the VAO
     fun bind() {
         glBindVertexArray(id)

@@ -69,6 +69,39 @@ class Shader(vertexFile: String, fragmentFile: String) {
         
     }
     
+    // Cached uniform setters: only talk to OpenGL when the value differs from the last one uploaded.
+    // Uniform values live in the program object, so the cache is per Shader. Don't mix these with the
+    // uncached setters/raw gl calls for the same uniform, or the cache can go stale.
+    private val mat4Cache = HashMap<Int, Matrix4f>()
+    private val vec3Cache = HashMap<Int, FloatArray>()
+    private val projectionCache = HashMap<Int, FloatArray>()
+
+    fun setMat4Cached(location: Int, matrix: Matrix4f) {
+        val cached = mat4Cache[location]
+        if (cached != null && cached == matrix) return
+
+        mat4Cache.getOrPut(location) { Matrix4f() }.set(matrix)
+        MemoryStack.stackPush().use { stack ->
+            glUniformMatrix4fv(location, false, matrix.get(stack.mallocFloat(16)))
+        }
+    }
+
+    fun setMat4Cached(location: Int, values: FloatArray) {
+        val cached = projectionCache[location]
+        if (cached != null && cached.contentEquals(values)) return
+
+        projectionCache[location] = values.copyOf()
+        glUniformMatrix4fv(location, false, values)
+    }
+
+    fun setVec3Cached(location: Int, vector: FloatArray) {
+        val cached = vec3Cache[location]
+        if (cached != null && cached.contentEquals(vector)) return
+
+        vec3Cache[location] = vector.copyOf()
+        glUniform3f(location, vector[0], vector[1], vector[2])
+    }
+
     fun setFloat(name: String, value: Float) {
         glUniform1f(location(name), value)
     }

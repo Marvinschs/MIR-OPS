@@ -4,11 +4,12 @@ import com.marvinschs.mirops.frontend.render.shapes.shape.Line
 import com.marvinschs.mirops.frontend.render.types.IRenderable
 import com.marvinschs.mirops.frontend.render.types.IResizable
 
-class Cross(
+class Cross @JvmOverloads constructor(
     x: Number,
     y: Number,
     width: Number,
     height: Number,
+    private val rightOffset: Number = 0,
 ): IRenderable, IResizable {
     //need this to make var not settable from outside this class
     var x: Float = x.toFloat()
@@ -17,36 +18,39 @@ class Cross(
         private set
     var width: Float = width.toFloat()
         private set
-    
+
     val line = Line(
         this.x + 18,
         this.y + 11,
         this.x + 27,
         this.y + 20,
     )
-    
+
     val line2 = Line(
         this.x + 27,
         this.y + 11,
         this.x + 18,
         this.y + 20,
     )
-    
+
     override fun onRender() {
         line.onRender()
         line2.onRender()
     }
-    
+
     override fun onDelete() {
         line.onDelete()
         line2.onDelete()
     }
-    
+
     override fun isMouseOver(mouseX: Float, mouseY: Float): Boolean {
         return false
     }
-    
+
     override fun onSizeChanged(newWidth: Float, newHeight: Float) = apply {
-    
+        this.x = newWidth - this.width - this.rightOffset.toFloat()
+
+        this.line.setPosition(this.x + 18, this.y + 11, this.x + 27, this.y + 20)
+        this.line2.setPosition(this.x + 27, this.y + 11, this.x + 18, this.y + 20)
     }
 }

@@ -12,7 +12,6 @@ import org.lwjgl.opengl.ARBVertexArrayObject.glBindVertexArray
 import org.lwjgl.opengl.GL11.GL_QUADS
 import org.lwjgl.opengl.GL11.GL_UNSIGNED_INT
 import org.lwjgl.opengl.GL11.glDrawElements
-import org.lwjgl.opengl.GL20.glUniformMatrix4fv
 import kotlin.math.cos
 import kotlin.math.sin
 
@@ -78,20 +77,30 @@ class Rectangle @JvmOverloads constructor (
         this.ebo.unbind()
     }
     
+    private val uModel = this.shader.getUniformLocation("uModel")
+
+    private val model = Matrix4f()
+    private var modelDirty = true
+
     override fun onRender() {
         this.shader.use()
-        glUniformMatrix4fv(this.uProjection, false, RenderManager.getProjection())
-        this.shader.setVec3(this.uColor, this.color)
-        
-        val model = Matrix4f()
-            .translate(this.x.toFloat() + this.width.toFloat() / 2f, this.y.toFloat() + this.height.toFloat() / 2f, 0f)
-            .rotateZ(Math.toRadians(this.rotationDeg.toDouble()).toFloat())
-            .translate(-0.5f * this.width.toFloat(), -0.5f * this.height.toFloat(), 0f)
-            .scale(this.width.toFloat(), this.height.toFloat(), 1f)
-            .scale(this.scale.first.toFloat(), this.scale.second.toFloat(), 1f)
-        
-        this.shader.setMat4("uModel", model)
-        
+
+        //the shader only forwards values to OpenGL when they changed since the last upload
+        this.shader.setMat4Cached(this.uProjection, RenderManager.getProjection())
+        this.shader.setVec3Cached(this.uColor, this.color)
+
+        if (this.modelDirty) {
+            this.model.identity()
+                .translate(this.x.toFloat() + this.width.toFloat() / 2f, this.y.toFloat() + this.height.toFloat() / 2f, 0f)
+                .rotateZ(Math.toRadians(this.rotationDeg.toDouble()).toFloat())
+                .translate(-0.5f * this.width.toFloat(), -0.5f * this.height.toFloat(), 0f)
+                .scale(this.width.toFloat(), this.height.toFloat(), 1f)
+                .scale(this.scale.first.toFloat(), this.scale.second.toFloat(), 1f)
+            this.modelDirty = false
+        }
+
+        this.shader.setMat4Cached(this.uModel, this.model)
+
         this.vao.bind()
         glDrawElements(GL_QUADS, this.drawCount, GL_UNSIGNED_INT, 0)
         glBindVertexArray(0)
@@ -126,11 +135,13 @@ class Rectangle @JvmOverloads constructor (
     override fun onSizeChanged(newWidth: Float, newHeight: Float) = apply {
         this.width = newWidth
         this.height = newHeight
+        this.modelDirty = true
     }
-    
+
     fun setPosition(x: Number, y: Number) = apply {
         this.x = x.toFloat()
         this.y = y.toFloat()
+        this.modelDirty = true
     }
     
     fun changeColor(newColor: FloatArray) = apply {
@@ -139,14 +150,17 @@ class Rectangle @JvmOverloads constructor (
     
     fun rotate(deg: Number) = apply {
         this.rotationDeg = this.rotationDeg.toFloat() + deg.toFloat()
+        this.modelDirty = true
     }
-    
+
     fun setScale(x: Number, y: Number) = apply {
         this.scale = Pair(x, y)
+        this.modelDirty = true
     }
-    
+
     fun scale(x: Number, y: Number) = apply {
         this.scale = Pair(this.scale.first.toFloat() + x.toFloat(), this.scale.second.toFloat() + y.toFloat())
+        this.modelDirty = true
     }
     
 }

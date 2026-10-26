@@ -1,5 +1,6 @@
 [versions]
 kotlin = "2.4.20"
+kotlinSerializationJson = "1.11.0"
 kotlinxCoroutines = "1.10.2"
 lwjgl = "3.4.1"
 imgui = "1.86.11"
@@ -8,6 +9,7 @@ joml = "1.10.5"
 [libraries]
 #Kotlin
 kotlinGradlePlugin = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin", version.ref = "kotlin" }
+kotlinSerializationJson = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinSerializationJson" }
 kotlinxCoroutines = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinxCoroutines" }
 #lwjgl core
 lwjgl-core = { module = "org.lwjgl:lwjgl-bom", version.ref = "lwjgl"}

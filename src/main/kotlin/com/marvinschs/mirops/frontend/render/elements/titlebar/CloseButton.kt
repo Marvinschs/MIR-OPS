@@ -47,9 +47,10 @@ class CloseButton(
     }
     
     override fun onSizeChanged(newWidth: Float, newHeight: Float) = apply {
-        this.x = newWidth - this.width
-        
-        //this.cross.onSizeChanged(this.)
+        this.x = newWidth
+
+        this.button.onSizeChanged(newWidth, newHeight)
+        this.cross.onSizeChanged(newWidth, newHeight)
     }
     
     override fun onMouseMove(mouseX: Float, mouseY: Float) {

@@ -33,8 +33,7 @@ class MainWindow {
     }
     
     private var window: Long = 0
-    
-    private var shutdownHooks = mutableListOf<() -> Unit>()
+    private lateinit var resizer: WindowResizer
     
     fun init() {
         println("Hello LWJGL " + Version.getVersion() + "!")
@@ -56,10 +55,13 @@ class MainWindow {
         
         // Create the window
         this.window = glfwCreateWindow(this.width.toInt(), this.height.toInt(), this.title, NULL, NULL)
+        windowHandle = this.window
         println("Window id is: ${this.window}")
         RenderManager.updateWindowSize(this.width, this.height)
         
         if (this.window == NULL) throw RuntimeException("Failed to create the main window")
+        
+        this.resizer = WindowResizer(this.window, this.resizable)
         
         // Set up a key callback. It will be called every time a key is pressed, repeated or released.
         glfwSetKeyCallback(this.window) { window, key, scancode, action, mods ->
@@ -67,12 +69,11 @@ class MainWindow {
             
         }
         
-        //hide Mouse
-        //glfwSetInputMode(this.window, GLFW_CURSOR, GLFW_CURSOR_HIDDEN) todo
-        
         glfwSetMouseButtonCallback(this.window) { window, button, action, mods ->
+            if (button == GLFW_MOUSE_BUTTON_1 && action == GLFW_RELEASE) this.resizer.onRelease()
+
             if (action != GLFW_PRESS) return@glfwSetMouseButtonCallback
-            
+
             when(button) {
                 GLFW_MOUSE_BUTTON_1 -> { //left click
                     val xBuf = DoubleArray(1)
@@ -80,6 +81,10 @@ class MainWindow {
                     glfwGetCursorPos(this.window, xBuf, yBuf)
                     val mouseX = xBuf[0].toFloat()
                     val mouseY = yBuf[0].toFloat()
+
+                    //a press on the window border starts a resize instead of being a click
+                    if (this.resizer.onPress(mouseX, mouseY)) return@glfwSetMouseButtonCallback
+
                     RenderManager.dispatchClick(mouseX, mouseY)
                 }
             }
@@ -87,13 +92,13 @@ class MainWindow {
         
         //update Window size
         glfwSetFramebufferSizeCallback(this.window) { window, newWidth, newHeight ->
-            
-            val width = newWidth.toFloat()
-            val height = newHeight.toFloat()
-            
+        
+            //val width = newWidth.toFloat()
+            //val height = newHeight.toFloat()
+        
             glViewport(0, 0, newWidth, newHeight)
-            
-            RenderManager.updateWindowSize(width, height)
+        
+            //RenderManager.updateWindowSize(width, height)
         }
         
         stackPush().use { stack ->
@@ -130,6 +135,7 @@ class MainWindow {
         // Free the window callbacks and destroy the window
         glfwFreeCallbacks(this.window)
         glfwDestroyWindow(this.window)
+        this.resizer.destroy()
         
         // Terminate GLFW and free the error callback
         glfwTerminate()
@@ -152,18 +158,24 @@ class MainWindow {
         // Run the rendering loop until the user has attempted to close
         // the window or has pressed the ESCAPE key.
         while (!shouldShutdown) {
+            val xBuf = DoubleArray(1)
+            val yBuf = DoubleArray(1)
+            
+            //Resizing has to happen before anything is drawn, changing the framebuffer size between clear and swap crashes the driver
+            glfwGetCursorPos(this.window, xBuf, yBuf)
+            this.resizer.update(xBuf[0].toFloat(), yBuf[0].toFloat())
+            
             // Specify the color of the background
             glClearColor(0.07f, 0.13f, 0.17f, 1.0f)
             glClear(GL_COLOR_BUFFER_BIT) // clear the framebuffer
             
             //Hover Control has to be at rendering there is no other way to get the current state/coordinates of the Mouse
-            val xBuf = DoubleArray(1)
-            val yBuf = DoubleArray(1)
+            //the cursor is read again as it is relative to the window, which a resize may have moved
             glfwGetCursorPos(this.window, xBuf, yBuf)
             val mouseX = xBuf[0].toFloat()
             val mouseY = yBuf[0].toFloat()
             RenderManager.dispatchHover(mouseX, mouseY)
-            
+
             RenderManager.render()
             
             
@@ -180,18 +192,35 @@ class MainWindow {
         
         println("Stopped")
         
-        this.shutdownHooks.forEach { it() }
+        shutdownHooks.forEach { it() }
     }
-    
-    fun addShutdownHook(function: () -> Unit) {
-        this.shutdownHooks.add(function)
-    }
-    
+
     companion object {
+        private var windowHandle: Long = NULL
+
+        /**
+         * Maximizes the window, or restores it when it is already maximized.
+         */
+        fun toggleMaximize() {
+            if (this.windowHandle == NULL) return
+
+            if (glfwGetWindowAttrib(this.windowHandle, GLFW_MAXIMIZED) == GLFW_TRUE) {
+                glfwRestoreWindow(this.windowHandle)
+            } else {
+                glfwMaximizeWindow(this.windowHandle)
+            }
+        }
+
         private var shouldShutdown = false
+        
+        private var shutdownHooks = mutableListOf<() -> Unit>()
         
         fun shutdown() {
             shouldShutdown = true
+        }
+        
+        fun addShutdownHook(function: () -> Unit) {
+            shutdownHooks.add(function)
         }
     }
 }

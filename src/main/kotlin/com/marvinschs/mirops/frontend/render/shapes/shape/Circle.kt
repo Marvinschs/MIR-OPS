@@ -9,7 +9,6 @@ import com.marvinschs.mirops.frontend.render.types.IRenderable
 import com.marvinschs.mirops.frontend.render.types.IResizable
 import org.joml.Matrix4f
 import org.lwjgl.opengl.GL11.*
-import org.lwjgl.opengl.GL20.*
 import org.lwjgl.opengl.GL30.*
 import kotlin.math.cos
 import kotlin.math.pow
@@ -54,25 +53,21 @@ class Circle @JvmOverloads constructor (
         private const val SEGMENTS = 64
     }
     
-    private val vertices = FloatArray(((SEGMENTS + 2) * 3)).apply {
+    //unit circle around (0,0): center vertex followed by SEGMENTS + 1 rim vertices (the last one closes the circle)
+    private val vertices = FloatArray((SEGMENTS + 2) * 2).apply {
         this[0] = 0f
         this[1] = 0f
         
         for (i in 0 .. SEGMENTS) {
             val angle = (2.0 * Math.PI * i / SEGMENTS).toFloat()
             
-            this[(i) * 2] = cos(angle)
-            this[(i) * 2 + 1] = sin(angle)
+            this[(i + 1) * 2] = cos(angle)
+            this[(i + 1) * 2 + 1] = sin(angle)
         }
     }
     
-    private val indices = IntArray(((SEGMENTS + 2) * 3)).apply {
-        for (i in 0 .. SEGMENTS) {
-            this[i * 3] = 0
-            this[i * 3 + 1] = i + 1
-            this[i * 3 + 2] = i + 2
-        }
-    }
+    //triangle fan: center, rim0, rim1, ..., rimN
+    private val indices = IntArray(SEGMENTS + 2) { it }
     
     private val drawCount = indices.size
     
@@ -93,24 +88,32 @@ class Circle @JvmOverloads constructor (
         this.ebo.unbind()
     }
     
+    private val uModel = this.shader.getUniformLocation("uModel")
+
+    private val model = Matrix4f()
+    private var modelDirty = true
+
     override fun onRender() {
         this.shader.use()
-        glUniformMatrix4fv(this.uProjection, false, RenderManager.getProjection())
-        
-        this.shader.setVec3(this.uColor, this.color)
-        
-        val model = Matrix4f()
-            .translate(this.x + this.radius, this.y + this.radius, 0f)
-            .rotateZ(Math.toRadians(this.rotationDeg.toDouble()).toFloat())
-            .translate(-this.radius, -this.radius, 0f)
-            .scale(this.radius, this.radius, 1f)
-            .scale(this.scale.first.toFloat(), this.scale.second.toFloat(), 1f)
-        
-        this.shader.setMat4("uModel", model)
-        
+
+        //the shader only forwards values to OpenGL when they changed since the last upload
+        this.shader.setMat4Cached(this.uProjection, RenderManager.getProjection())
+        this.shader.setVec3Cached(this.uColor, this.color)
+
+        if (this.modelDirty) {
+            this.model.identity()
+                .translate(this.x, this.y, 0f)
+                .rotateZ(Math.toRadians(this.rotationDeg.toDouble()).toFloat())
+                .scale(this.radius, this.radius, 1f)
+                .scale(this.scale.first.toFloat(), this.scale.second.toFloat(), 1f)
+            this.modelDirty = false
+        }
+
+        this.shader.setMat4Cached(this.uModel, this.model)
+
         this.vao.bind()
         
-        glDrawElements(GL_TRIANGLE_STRIP, this.drawCount, GL_UNSIGNED_INT, 0)
+        glDrawElements(GL_TRIANGLE_FAN, this.drawCount, GL_UNSIGNED_INT, 0)
         
         glBindVertexArray(0)
     }
@@ -147,11 +150,13 @@ class Circle @JvmOverloads constructor (
     
     override fun onSizeChanged(newWidth: Float, newHeight: Float) = apply {
         this.radius = minOf(newWidth, newHeight) / 2f
+        this.modelDirty = true
     }
-    
+
     fun setPosition(x: Float, y: Float) = apply{
         this.x = x
         this.y = y
+        this.modelDirty = true
     }
     
     fun changeColor(newColor: FloatArray) = apply {
@@ -160,17 +165,21 @@ class Circle @JvmOverloads constructor (
     
     fun rotate(deg: Number) = apply {
         this.rotationDeg = this.rotationDeg.toFloat() + deg.toFloat()
+        this.modelDirty = true
     }
-    
+
     fun setRadius(radius: Number) = apply {
         this.radius = radius.toFloat()
+        this.modelDirty = true
     }
-    
+
     fun setScale(x: Number, y: Number) = apply {
         this.scale = Pair(x, y)
+        this.modelDirty = true
     }
-    
+
     fun scale(x: Number, y: Number) = apply {
         this.scale = Pair(this.scale.first.toFloat() + x.toFloat(), this.scale.second.toFloat() + y.toFloat())
+        this.modelDirty = true
     }
 }

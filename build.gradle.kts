@@ -1,6 +1,7 @@
 
 plugins {
     kotlin("jvm") version libs.versions.kotlin
+    kotlin("plugin.serialization") version libs.versions.kotlin
     
     application
 }
@@ -17,11 +18,14 @@ dependencies {
     
     //kotlin coroutines etc.
     implementation(libs.bundles.kotlinxEcosystem)
+    implementation(libs.kotlinSerializationJson)
     
     //lwjgl
     implementation(platform(libs.lwjgl.core))
     implementation(libs.bundles.lwjgl)
     runtimeOnly(variantOf(libs.lwjgl) { classifier("natives-windows") })
+    
+    runtimeOnly("org.lwjgl:lwjgl-stb::natives-windows")
     
     implementation(libs.joml)
     implementation(libs.imgui)
@@ -32,7 +36,7 @@ kotlin {
 }
 
 application {
-    mainClass.set("com.marvinschs.mirops.MainKt")
+    mainClass.set("com.marvinschs.mirops.Main")
     sourceSets["main"].resources.srcDirs("src/main/resources")
     applicationDefaultJvmArgs = listOf("-XstartOnFirstThread")
 }
@@ -61,6 +65,7 @@ tasks.jar.configure {
     
     doLast {
         println()
+        File("${project.buildDir}/libs/MIR-OPS_$version.jar").copyTo(File("E:/run/MIR-OPS/MIR-OPS_$version.jar"), overwrite = true)
         println("Created jar")
     }
 }

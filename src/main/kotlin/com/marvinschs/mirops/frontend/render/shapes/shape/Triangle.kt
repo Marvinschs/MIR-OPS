@@ -11,7 +11,6 @@ import org.joml.Matrix4f
 import org.lwjgl.opengl.GL11.GL_TRIANGLES
 import org.lwjgl.opengl.GL11.GL_UNSIGNED_INT
 import org.lwjgl.opengl.GL11.glDrawElements
-import org.lwjgl.opengl.GL20.glUniformMatrix4fv
 import org.lwjgl.opengl.GL30.glBindVertexArray
 import kotlin.math.cos
 import kotlin.math.sin
@@ -77,19 +76,29 @@ class Triangle @JvmOverloads constructor(
         this.ebo.unbind()
     }
     
+    private val uModel = this.shader.getUniformLocation("uModel")
+
+    private val model = Matrix4f()
+    private var modelDirty = true
+
     override fun onRender() {
         this.shader.use()
-        glUniformMatrix4fv(this.uProjection, false, RenderManager.getProjection())
-        this.shader.setVec3(this.uColor, this.color)
-        
-        val model = Matrix4f()
-            .translate(this.x.toFloat(), this.y.toFloat(), 0f)
-            .rotateZ(Math.toRadians(this.rotationDeg.toDouble()).toFloat())
-            .scale(this.width.toFloat(), this.height.toFloat(), 0f)
-            .scale(this.scale.first.toFloat(), this.scale.second.toFloat(), 1f)
-        
-        this.shader.setMat4("uModel", model)
-        
+
+        //the shader only forwards values to OpenGL when they changed since the last upload
+        this.shader.setMat4Cached(this.uProjection, RenderManager.getProjection())
+        this.shader.setVec3Cached(this.uColor, this.color)
+
+        if (this.modelDirty) {
+            this.model.identity()
+                .translate(this.x.toFloat(), this.y.toFloat(), 0f)
+                .rotateZ(Math.toRadians(this.rotationDeg.toDouble()).toFloat())
+                .scale(this.width.toFloat(), this.height.toFloat(), 0f)
+                .scale(this.scale.first.toFloat(), this.scale.second.toFloat(), 1f)
+            this.modelDirty = false
+        }
+
+        this.shader.setMat4Cached(this.uModel, this.model)
+
         this.vao.bind()
         glDrawElements(GL_TRIANGLES, this.drawCount, GL_UNSIGNED_INT, 0)
         glBindVertexArray(0)
@@ -130,5 +139,6 @@ class Triangle @JvmOverloads constructor(
         this.x = this.width.toFloat() / 2f
         this.height = newHeight
         this.y = this.height.toFloat() / 2f
+        this.modelDirty = true
     }
 }

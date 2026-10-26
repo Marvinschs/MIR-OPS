@@ -20,8 +20,17 @@ object RenderManager {
         hoverableElements
     )
     
+    private var titleBar: TitleBar? = null
+
     fun init() {
-        TitleBar("This is a test", this.screenWidth)
+        this.titleBar = TitleBar("This is a test", this.screenWidth)
+    }
+
+    /**
+     * Whether the mouse is on a title bar button (close, maximize).
+     */
+    fun isMouseOverTitleBarButton(mouseX: Float, mouseY: Float): Boolean {
+        return this.titleBar?.isMouseOverButton(mouseX, mouseY) ?: false
     }
     
     fun addElement(element: IElement): IElement {
@@ -60,10 +69,24 @@ object RenderManager {
     private var screenWidth: Float = 800.0F
     private var screenHeight: Float = 800.0F
     
+    private val projectionMatrix = Matrix4f()
+    private val projection = FloatArray(16)
+
+    init {
+        this.rebuildProjection()
+    }
+
+    private fun rebuildProjection() {
+        this.projectionMatrix
+            .setOrtho(0f, this.screenWidth, this.screenHeight, 0f, -1f, 1f)
+            .get(this.projection)
+    }
+
     fun updateWindowSize(width: Float, height: Float) {
         this.screenWidth = width
         this.screenHeight = height
-        
+        this.rebuildProjection()
+
         this.resizeableElements.forEach { it.onSizeChanged(this.screenWidth, this.screenHeight) }
     }
     
@@ -75,9 +98,9 @@ object RenderManager {
         this.hoverableElements.forEach { it.onMouseMove(mouseX, mouseY) }
     }
     
-    fun getProjection(): FloatArray {
-        return Matrix4f()
-            .ortho(0f, this.screenWidth, this.screenHeight, 0f, -1f, 1f)
-            .get(FloatArray(16))
-    }
+    /**
+     * The cached orthographic projection, rebuilt in [updateWindowSize].
+     * The returned array is shared, so callers must not modify it.
+     */
+    fun getProjection(): FloatArray = this.projection
 }

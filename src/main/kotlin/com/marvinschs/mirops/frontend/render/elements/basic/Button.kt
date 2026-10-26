@@ -9,7 +9,8 @@ open class Button @JvmOverloads constructor(
     y: Number,
     width: Number,
     height: Number,
-    private val defaultColor: FloatArray = floatArrayOf(0.235F, 0.247F, 0.255F)
+    private val defaultColor: FloatArray = floatArrayOf(0.235F, 0.247F, 0.255F),
+    private val rightOffset: Number = 0,
 ): IRenderable, IResizable {
     //need this to make var not settable from outside this class
     var x: Number = x
@@ -44,7 +45,7 @@ open class Button @JvmOverloads constructor(
     }
     
     override fun onSizeChanged(newWidth: Float, newHeight: Float) = apply {
-        this.x = newWidth - this.width.toFloat()
+        this.x = newWidth - this.width.toFloat() - this.rightOffset.toFloat()
         this.background.setPosition(this.x, this.y)
     }
     
